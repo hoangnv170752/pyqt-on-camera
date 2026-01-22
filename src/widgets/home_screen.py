@@ -20,8 +20,6 @@ class HomeScreen(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setStyleSheet("background-color: white;")
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(50, 50, 50, 50)
 

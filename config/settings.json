@@ -14,5 +14,9 @@
   "snapshots": {
     "output_dir": "snapshots",
     "format": "png"
+  },
+  "author": {
+    "name": "Hoang Nguyen",
+    "email": "devlearn0402@gmail.com"
   }
 }

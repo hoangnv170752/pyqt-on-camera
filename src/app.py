@@ -5,16 +5,23 @@ from PyQt6.QtWidgets import (
     QStackedWidget,
     QStatusBar,
     QToolBar,
+    QLabel,
 )
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtCore import Qt
 
+import json
+from pathlib import Path
+
 from src.widgets.home_screen import HomeScreen
 from src.widgets.grid_view import GridView
 from src.services.database import Database
+from src.services.resource_monitor import ResourceMonitor
 from src.services.logger import get_logger
 
 logger = get_logger("app")
+
+SETTINGS_PATH = Path("config/settings.json")
 
 
 class MainWindow(QMainWindow):
@@ -27,11 +34,13 @@ class MainWindow(QMainWindow):
 
         self.db = Database()
         self.grid_view = None
+        self.resource_monitor = ResourceMonitor(interval_ms=2000)
 
         self._setup_ui()
         self._setup_toolbar()
         self._setup_menu()
         self._setup_statusbar()
+        self._setup_resource_monitor()
 
         logger.info("MainWindow initialized successfully")
 
@@ -67,6 +76,12 @@ class MainWindow(QMainWindow):
         self.home_action.triggered.connect(self._go_home)
         toolbar.addAction(self.home_action)
 
+        self.export_action = QAction("Export", self)
+        self.export_action.setShortcut(QKeySequence("Ctrl+E"))
+        self.export_action.setToolTip("Export data (Ctrl+E)")
+        self.export_action.triggered.connect(self._on_data_export)
+        toolbar.addAction(self.export_action)
+
         toolbar.addSeparator()
 
     def _setup_menu(self):
@@ -81,6 +96,10 @@ class MainWindow(QMainWindow):
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self._open_file)
         file_menu.addAction(open_action)
+
+        file_menu.addSeparator()
+
+        file_menu.addAction(self.export_action)
 
         file_menu.addSeparator()
 
@@ -122,7 +141,25 @@ class MainWindow(QMainWindow):
     def _setup_statusbar(self):
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
+
+        self.ram_label = QLabel("RAM: ---%")
+        self.cpu_label = QLabel("CPU: ---%")
+
+        self.statusbar.addPermanentWidget(self.ram_label)
+        self.statusbar.addPermanentWidget(self.cpu_label)
+
         self.statusbar.showMessage("Ready")
+
+    def _setup_resource_monitor(self):
+        self.resource_monitor.updated.connect(self._on_resource_update)
+        self.resource_monitor.start()
+
+    def _on_resource_update(self, stats: dict):
+        ram_percent = stats.get("ram_percent", 0)
+        cpu_percent = stats.get("cpu_percent", 0)
+
+        self.ram_label.setText(f"RAM: {ram_percent:.1f}%")
+        self.cpu_label.setText(f"CPU: {cpu_percent:.1f}%")
 
     def _go_home(self):
         logger.debug("Navigating to home screen")
@@ -138,6 +175,15 @@ class MainWindow(QMainWindow):
         logger.info("How to use button clicked")
         from PyQt6.QtWidgets import QMessageBox
 
+        author_name = "Unknown"
+        author_email = ""
+        if SETTINGS_PATH.exists():
+            with open(SETTINGS_PATH) as f:
+                settings = json.load(f)
+                author_info = settings.get("author", {})
+                author_name = author_info.get("name", "Unknown")
+                author_email = author_info.get("email", "")
+
         QMessageBox.information(
             self,
             "How to Use",
@@ -145,7 +191,9 @@ class MainWindow(QMainWindow):
             "1. Click 'Start' to enter the viewer\n"
             "2. Use Camera > Add Camera to add RTSP/HTTP streams\n"
             "3. Use File > Open File to play local videos\n"
-            "4. Use View menu to change grid layout (2x2, 3x3, 4x4)",
+            "4. Use View menu to change grid layout (2x2, 3x3, 4x4)\n\n"
+            f"Author: {author_name}\n"
+            f"Email: {author_email}",
         )
 
     def _on_data_export(self):
@@ -206,6 +254,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         logger.info("Application closing")
+        self.resource_monitor.stop()
         if self.grid_view:
             self.grid_view.stop_all()
         event.accept()
