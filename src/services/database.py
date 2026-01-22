@@ -2,6 +2,9 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 from src.models.camera import Camera
+from src.services.logger import get_logger
+
+logger = get_logger("database")
 
 
 class Database:
@@ -12,9 +15,11 @@ class Database:
         self._init_db()
 
     def _init_db(self):
+        logger.info(f"Initializing database at {self.db_path}")
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
+        logger.debug("Database initialized successfully")
 
     def _create_tables(self):
         cursor = self.conn.cursor()
@@ -41,6 +46,7 @@ class Database:
         self.conn.commit()
 
     def add_camera(self, camera: Camera) -> int:
+        logger.debug(f"Adding camera: {camera.name}")
         cursor = self.conn.cursor()
         cursor.execute(
             """
@@ -50,6 +56,7 @@ class Database:
             (camera.name, camera.url, camera.type, camera.enabled, camera.position),
         )
         self.conn.commit()
+        logger.info(f"Camera added with id {cursor.lastrowid}")
         return cursor.lastrowid
 
     def get_camera(self, camera_id: int) -> Optional[Camera]:
@@ -86,10 +93,14 @@ class Database:
         return cursor.rowcount > 0
 
     def delete_camera(self, camera_id: int) -> bool:
+        logger.debug(f"Deleting camera id {camera_id}")
         cursor = self.conn.cursor()
         cursor.execute("DELETE FROM cameras WHERE id = ?", (camera_id,))
         self.conn.commit()
-        return cursor.rowcount > 0
+        deleted = cursor.rowcount > 0
+        if deleted:
+            logger.info(f"Camera {camera_id} deleted")
+        return deleted
 
     def get_setting(self, key: str, default: str = None) -> Optional[str]:
         cursor = self.conn.cursor()

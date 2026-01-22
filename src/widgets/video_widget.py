@@ -2,17 +2,30 @@ import sys
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel
 from PyQt6.QtCore import Qt
 
-import vlc
+try:
+    import vlc
+except Exception as e:
+    vlc = None
+    _VLC_IMPORT_ERROR = e
 
 
 class VideoWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.instance = vlc.Instance()
-        self.player = self.instance.media_player_new()
         self.media = None
+        self.instance = None
+        self.player = None
 
         self._setup_ui()
+
+        if vlc is None:
+            self.label.setText(
+                "VLC not available. Install VLC (libvlc) to enable playback."
+            )
+            return
+
+        self.instance = vlc.Instance()
+        self.player = self.instance.media_player_new()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -34,6 +47,13 @@ class VideoWidget(QWidget):
         layout.addWidget(self.video_frame)
 
     def play(self, source: str):
+        if vlc is None or self.instance is None or self.player is None:
+            self.label.show()
+            self.label.setText(
+                f"VLC not available: {_VLC_IMPORT_ERROR}"
+            )
+            return
+
         self.label.hide()
         self.media = self.instance.media_new(source)
         self.player.set_media(self.media)
@@ -48,18 +68,27 @@ class VideoWidget(QWidget):
         self.player.play()
 
     def stop(self):
+        if self.player is None:
+            return
         self.player.stop()
         self.label.show()
         self.label.setText("No Stream")
 
     def pause(self):
+        if self.player is None:
+            return
         self.player.pause()
 
     def is_playing(self) -> bool:
+        if self.player is None:
+            return False
         return self.player.is_playing()
 
     def get_media_info(self) -> dict:
         if not self.media:
+            return {}
+
+        if self.player is None:
             return {}
 
         self.media.parse()
