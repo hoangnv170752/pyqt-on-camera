@@ -1,0 +1,18 @@
+{
+  "window": {
+    "width": 1024,
+    "height": 768
+  },
+  "grid": {
+    "rows": 2,
+    "cols": 2
+  },
+  "recording": {
+    "output_dir": "recordings",
+    "format": "mp4"
+  },
+  "snapshots": {
+    "output_dir": "snapshots",
+    "format": "png"
+  }
+}
