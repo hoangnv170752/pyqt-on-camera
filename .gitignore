@@ -13,12 +13,21 @@ logs/
 .vscode/
 *.swp
 *.swo
-
+dist
 # App data
 data/app.db
 recordings/
-snapshots/
+exports/
 logs/
+BUILD_MACOS.md
+
+build/
+
+# Distribution files (too large for git)
+*.dmg
+*.zip
+*.exe
+*.app
 
 # OS
 .DS_Store
