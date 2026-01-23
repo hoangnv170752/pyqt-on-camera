@@ -6,6 +6,8 @@ from PyQt6.QtWidgets import (
     QStatusBar,
     QToolBar,
     QLabel,
+    QMenu,
+    QMessageBox,
 )
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtCore import Qt
@@ -15,6 +17,7 @@ from pathlib import Path
 
 from src.widgets.home_screen import HomeScreen
 from src.widgets.grid_view import GridView
+from src.widgets.camera_dialog import AddCameraDialog, CameraManagerDialog
 from src.services.database import Database
 from src.services.resource_monitor import ResourceMonitor
 from src.services.logger import get_logger
@@ -82,6 +85,23 @@ class MainWindow(QMainWindow):
         self.export_action.triggered.connect(self._on_data_export)
         toolbar.addAction(self.export_action)
 
+        self.camera_action = QAction("Camera", self)
+        self.camera_action.setShortcut(QKeySequence("Ctrl+N"))
+        self.camera_action.setToolTip("Add camera (Ctrl+N)")
+        self.camera_action.triggered.connect(self._add_camera)
+        toolbar.addAction(self.camera_action)
+
+        # View button with dropdown menu
+        self.view_action = QAction("View", self)
+        self.view_action.setToolTip("Change grid layout")
+        view_menu = QMenu(self)
+        view_menu.addAction("1x1", lambda: self._set_grid(1, 1))
+        view_menu.addAction("2x2", lambda: self._set_grid(2, 2))
+        view_menu.addAction("3x3", lambda: self._set_grid(3, 3))
+        view_menu.addAction("4x4", lambda: self._set_grid(4, 4))
+        self.view_action.setMenu(view_menu)
+        toolbar.addAction(self.view_action)
+
         toolbar.addSeparator()
 
     def _setup_menu(self):
@@ -111,6 +131,10 @@ class MainWindow(QMainWindow):
         # View menu
         view_menu = menubar.addMenu("&View")
 
+        grid_1x1 = QAction("Grid 1x1", self)
+        grid_1x1.triggered.connect(lambda: self._set_grid(1, 1))
+        view_menu.addAction(grid_1x1)
+
         grid_2x2 = QAction("Grid 2x2", self)
         grid_2x2.triggered.connect(lambda: self._set_grid(2, 2))
         view_menu.addAction(grid_2x2)
@@ -130,6 +154,11 @@ class MainWindow(QMainWindow):
         add_camera.setShortcut("Ctrl+N")
         add_camera.triggered.connect(self._add_camera)
         camera_menu.addAction(add_camera)
+
+        manage_cameras = QAction("&Manage Cameras...", self)
+        manage_cameras.setShortcut("Ctrl+M")
+        manage_cameras.triggered.connect(self._manage_cameras)
+        camera_menu.addAction(manage_cameras)
 
         # Help menu
         help_menu = menubar.addMenu("&Help")
@@ -210,7 +239,21 @@ class MainWindow(QMainWindow):
     def _set_grid(self, rows: int, cols: int):
         logger.debug(f"Setting grid to {rows}x{cols}")
         if self.grid_view:
+            lost_count = self.grid_view.will_lose_sources(rows, cols)
+            if lost_count > 0:
+                reply = QMessageBox.question(
+                    self,
+                    "Xác nhận thay đổi",
+                    f"Thay đổi sang {rows}x{cols} sẽ mất {lost_count} video đang phát.\n"
+                    "Bạn có muốn tiếp tục không?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+
             self.grid_view.set_grid(rows, cols)
+            self.statusbar.showMessage(f"Grid: {rows}x{cols}")
         self.stacked_widget.setCurrentWidget(self.viewer_widget)
 
     def _open_file(self):
@@ -229,16 +272,18 @@ class MainWindow(QMainWindow):
             self.statusbar.showMessage(f"Opened: {file_path}")
 
     def _add_camera(self):
-        from PyQt6.QtWidgets import QInputDialog
-
-        url, ok = QInputDialog.getText(
-            self, "Add Camera", "Enter stream URL (RTSP/HTTP):"
-        )
-        if ok and url:
-            logger.info(f"Adding camera stream: {url}")
+        dialog = AddCameraDialog(self)
+        if dialog.exec():
+            camera = dialog.get_camera()
+            self.db.add_camera(camera)
+            logger.info(f"Adding camera: {camera.name}")
             self.stacked_widget.setCurrentWidget(self.viewer_widget)
-            self.grid_view.play_in_next_slot(url)
-            self.statusbar.showMessage(f"Added stream: {url}")
+            self.grid_view.play_in_next_slot(camera.url)
+            self.statusbar.showMessage(f"Added: {camera.name}")
+
+    def _manage_cameras(self):
+        dialog = CameraManagerDialog(self.db, self)
+        dialog.exec()
 
     def _show_about(self):
         from PyQt6.QtWidgets import QMessageBox

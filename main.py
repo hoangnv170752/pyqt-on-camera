@@ -7,6 +7,13 @@ logger = get_logger("main")
 
 
 def main():
+    try:
+        import pygame
+        pygame.mixer.pre_init(44100, -16, 2, 512)
+        pygame.mixer.init()
+    except Exception:
+        pass
+    
     logger.info("Starting PC CamTouch application")
 
     app = QApplication(sys.argv)
