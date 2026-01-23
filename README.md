@@ -50,12 +50,12 @@ pyqt-on-camera/
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| GUI Framework | PyQt6 |
-| Video Playback | python-vlc |
-| Database | SQLite3 (built-in) |
-| Configuration | JSON |
+| Component      | Technology         |
+| -------------- | ------------------ |
+| GUI Framework  | PyQt6              |
+| Video Playback | python-vlc         |
+| Database       | SQLite3 (built-in) |
+| Configuration  | JSON               |
 
 ---
 
@@ -94,13 +94,15 @@ python main.py
 
 ## Development Plan
 
+Version v0.0.1 - release
+
 See detailed documentation in the [docs/](docs/) folder:
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| [Phase 1](docs/phase-1-basic-setup.md) | Basic Setup - PyQt6, VLC, SQLite | Current |
-| [Phase 2](docs/phase-2-core-features.md) | Core Features - Multi-camera, Stream management | Pending |
-| [Phase 3](docs/phase-3-video-analysis.md) | Video Analysis - Metadata, Snapshots, Recording | Pending |
+| Phase                                     | Description                                       | Status  |
+| ----------------------------------------- | ------------------------------------------------- | ------- |
+| [Phase 1](docs/phase-1-basic-setup.md)       | Basic Setup - PyQt6, VLC, SQLite                  | Done    |
+| [Phase 2](docs/phase-2-core-features.md)     | Core Features - Multi-camera, Stream management   | Done    |
+| [Phase 3](docs/phase-3-video-analysis.md)    | Video Analysis - Metadata, Snapshots, Recording   | Current |
 | [Phase 4](docs/phase-4-advanced-features.md) | Advanced - SRGAN, ICC integration, Custom layouts | Pending |
 
 ---
